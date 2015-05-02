@@ -1,0 +1,38 @@
+apply plugin: 'com.android.library'
+
+buildscript {
+    repositories {
+        mavenCentral ()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:1.1.0'
+    }
+}
+
+android {
+    compileSdkVersion 21
+    buildToolsVersion "21.1.2"
+
+    defaultConfig {
+        minSdkVersion 11
+        targetSdkVersion 21
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDir('C:\\Users\\Boner\\AndroidStudioProjects\\receiptCV\\openCVLibrary2410\\src\\main\\java')
+            res.srcDir('C:\\Users\\Boner\\AndroidStudioProjects\\receiptCV\\openCVLibrary2410\\src\\main\\res')
+            aidl.srcDir('C:\\Users\\Boner\\AndroidStudioProjects\\receiptCV\\openCVLibrary2410\\src\\main\\aidl')
+            assets.srcDir('C:\\Users\\Boner\\AndroidStudioProjects\\receiptCV\\openCVLibrary2410\\build\\intermediates\\assets')
+            resources.srcDir('C:\\Users\\Boner\\AndroidStudioProjects\\receiptCV\\openCVLibrary2410\\build\\intermediates\\resources')
+            jniLibs.srcDir('C:\\Users\\Boner\\AndroidStudioProjects\\receiptCV\\app\\build\\intermediates\\exploded-aar\\receiptCV\\openCVLibrary2410\\unspecified\\jni')
+        }
+    }
+}
