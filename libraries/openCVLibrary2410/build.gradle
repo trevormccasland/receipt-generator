@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:1.1.0'
+    }
+}
+
+android {
+    compileSdkVersion 22
+    buildToolsVersion "22.0.1"
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 22
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile '\\src\\main\\AndroidManifest.xml'
+            java.srcDir ('src\\main\\java')
+            res.srcDir ('src\\main\\res')
+            aidl.srcDir ('src\\main\\aidl')
+            assets.srcDir ('build\\intermediates\\assets')
+            resources.srcDir('build\\intermediates\\resources')
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+}

@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -28,10 +29,18 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+
+import com.googlecode.tesseract.android.TessBaseAPI;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.lang.Float;
@@ -41,7 +50,7 @@ import java.util.List;
 public class ListActivity extends Activity implements View.OnClickListener,
         AdapterView.OnItemClickListener{
 
-    private static int TAKE_PICTURE = 1;//Value to indicate to take a picture
+    private static final String TAG = "TESSERACT" ;
     private Uri imageUri;//Class to hold address of the image for the bitmap
     static final int SIZE=140;//Specifies bitmap size
     static final String DESC_KEY = "desc";//Description key used in map for list items
@@ -53,7 +62,12 @@ public class ListActivity extends Activity implements View.OnClickListener,
     ArrayList<HashMap<String,String>> list = new ArrayList<HashMap<String, String>>();
     ArrayList<Bitmap> bitmaps = new ArrayList<Bitmap>();
     Bitmap bitmap= null;
-
+    final String DATA_PATH = Environment
+            .getExternalStorageDirectory().toString() + "/SimpleAndroidOCR/";
+    private static final String TESSBASE_PATH = "/mnt/sdcard/tesseract/";
+    private static final String DEFAULT_LANGUAGE = "eng";
+    private static final String EXPECTED_FILE = TESSBASE_PATH + "tessdata/" + DEFAULT_LANGUAGE
+            + ".traineddata";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //Required code to set view
@@ -74,6 +88,8 @@ public class ListActivity extends Activity implements View.OnClickListener,
         askForInfo(getWindow().getDecorView());*/
 
     }
+
+
 
     private void addLineItem(Bitmap bitmap, String desc, String price, String quantity){
         //Hashmap to hold data to be insterted into list
@@ -179,6 +195,7 @@ public class ListActivity extends Activity implements View.OnClickListener,
         }
         //Class used to reference another activity inside an activity
         Intent intent = new Intent(this,PhoneActivity.class);
+        int TAKE_PICTURE = 1;
         startActivityForResult(intent, TAKE_PICTURE);
 
     }
@@ -197,10 +214,75 @@ public class ListActivity extends Activity implements View.OnClickListener,
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            Log.i(TAG, "HERE");
+            OCR(bitmap);
+
+        }
+
+    }
+    private void copyAssets() {
+
+        String[] paths = new String[] { DATA_PATH, DATA_PATH + "tessdata/" };
+
+        for (String path : paths) {
+            File dir = new File(path);
+            if (!dir.exists()) {
+                if (!dir.mkdirs()) {
+                    Log.v(TAG, "ERROR: Creation of directory " + path + " on sdcard failed");
+                    return;
+                } else {
+                    Log.v(TAG, "Created directory " + path + " on sdcard");
+                }
+            }
+
+        }
+        File newFile = new File(DATA_PATH + "tessdata/" + DEFAULT_LANGUAGE+ ".traineddata");
+        if (!newFile.exists()) {
+            try {
+
+                AssetManager assetManager = getAssets();
+                InputStream in = assetManager.open("tessdata/" + DEFAULT_LANGUAGE + ".traineddata");
+                //GZIPInputStream gin = new GZIPInputStream(in);
+                OutputStream out = new FileOutputStream(DATA_PATH
+                        + "tessdata/" + DEFAULT_LANGUAGE + ".traineddata");
+
+                // Transfer bytes from in to out
+                byte[] buf = new byte[1024];
+                int len;
+                //while ((lenf = gin.read(buff)) > 0) {
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
+                }
+                in.close();
+                //gin.close();
+                out.close();
+
+                Log.v(TAG, "Copied " + DEFAULT_LANGUAGE + " traineddata");
+            } catch (IOException e) {
+                Log.e(TAG, "Was unable to copy " + DEFAULT_LANGUAGE + " traineddata " + e.toString());
+            }
         }
 
     }
 
+    String text;
+    void OCR(Bitmap bmp) {
+        TessBaseAPI baseApi = new TessBaseAPI();
+        copyAssets();
+        try {
+            baseApi.init(DATA_PATH, DEFAULT_LANGUAGE);
+        }
+        catch (IllegalArgumentException E){
+            Log.e(TAG, E.getMessage()+": "+DATA_PATH);
+
+        }
+        baseApi.setImage(bmp);
+        final String outputText = baseApi.getUTF8Text();
+        text = outputText;
+        Log.i(TAG,outputText);
+
+    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -241,7 +323,7 @@ public class ListActivity extends Activity implements View.OnClickListener,
         final EditText Description = (EditText)dialogInfo.findViewById(R.id.item_Description);
         final EditText Price = (EditText)dialogInfo.findViewById(R.id.item_Price);
         final EditText Quantity = (EditText)dialogInfo.findViewById(R.id.quantity);
-
+        Description.setText(text);
         //Creates a new builder for this page (main)
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         //Sets the view info for the builder

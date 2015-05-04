@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3"><dataSet config="debug"><source path="C:\Users\Boner\AndroidStudioProjects\receiptCV\libraries\tess-two\build\intermediates\bundles\debug\assets"><file name="tessdata/eng.traineddata" path="C:\Users\Boner\AndroidStudioProjects\receiptCV\libraries\tess-two\build\intermediates\bundles\debug\assets\tessdata\eng.traineddata"/></source></dataSet><dataSet config="main"><source path="C:\Users\Boner\AndroidStudioProjects\receiptCV\libraries\tess-two\src\androidTest\assets"/></dataSet></merger>
