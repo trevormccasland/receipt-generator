@@ -34,6 +34,13 @@ import android.widget.Toast;
 
 import com.googlecode.tesseract.android.TessBaseAPI;
 
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -53,6 +60,7 @@ public class ListActivity extends Activity implements View.OnClickListener,
     private static final String TAG = "TESSERACT" ;
     private Uri imageUri;//Class to hold address of the image for the bitmap
     static final int SIZE=140;//Specifies bitmap size
+    final int SUBTOTAL_LABEL_LENGTH =11;
     static final String DESC_KEY = "desc";//Description key used in map for list items
     static final String PRICE_KEY = "price";//Price key used in map for list items
     static final String QUANTITY_KEY = "quantity";//Quantity key used in map for list items
@@ -64,10 +72,9 @@ public class ListActivity extends Activity implements View.OnClickListener,
     Bitmap bitmap= null;
     final String DATA_PATH = Environment
             .getExternalStorageDirectory().toString() + "/SimpleAndroidOCR/";
-    private static final String TESSBASE_PATH = "/mnt/sdcard/tesseract/";
     private static final String DEFAULT_LANGUAGE = "eng";
-    private static final String EXPECTED_FILE = TESSBASE_PATH + "tessdata/" + DEFAULT_LANGUAGE
-            + ".traineddata";
+    String tessDesc="";
+    String tessPrice="";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //Required code to set view
@@ -75,21 +82,7 @@ public class ListActivity extends Activity implements View.OnClickListener,
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_phone);
         context=this;
-
-/*        String filename = getIntent().getStringExtra("image");
-        try {
-            FileInputStream is = this.openFileInput(filename);
-            bitmap = BitmapFactory.decodeStream(is);
-            is.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        askForInfo(getWindow().getDecorView());*/
-
     }
-
-
 
     private void addLineItem(Bitmap bitmap, String desc, String price, String quantity){
         //Hashmap to hold data to be insterted into list
@@ -111,7 +104,7 @@ public class ListActivity extends Activity implements View.OnClickListener,
         //Get Subtotal from view
         subTotal =(TextView) findViewById(R.id.subtotal);
         String previousAmount;
-        previousAmount =  subTotal.getText().toString().substring(11);
+        previousAmount =  subTotal.getText().toString().substring(SUBTOTAL_LABEL_LENGTH);
 
         //If the total is empty, only add the price of the item
         if(!tryParseFloat(price))
@@ -216,8 +209,9 @@ public class ListActivity extends Activity implements View.OnClickListener,
             }
 
             Log.i(TAG, "HERE");
-            OCR(bitmap);
-
+            Bitmap bmp = bitmap.copy(bitmap.getConfig(),true);
+            OCR(bmp);
+            askForInfo(getWindow().getDecorView());
         }
 
     }
@@ -266,7 +260,7 @@ public class ListActivity extends Activity implements View.OnClickListener,
 
     }
 
-    String text;
+
     void OCR(Bitmap bmp) {
         TessBaseAPI baseApi = new TessBaseAPI();
         copyAssets();
@@ -277,11 +271,106 @@ public class ListActivity extends Activity implements View.OnClickListener,
             Log.e(TAG, E.getMessage()+": "+DATA_PATH);
 
         }
+        baseApi.setVariable("textord_min_xheight","25");
+        //baseApi.setVariable("language_model_penalty_non_freq_dict_word", "1");
+        //baseApi.setVariable("language_model_penalty_non_dict_word ", "1");
+        //baseApi.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST,"QWERTYUIOPASDFGHJKLZXCVBNM1234567890.$ ");
+        //baseApi.setVariable(TessBaseAPI.VAR_CHAR_BLACKLIST,"qwertyuiopasdfghjklzxcvbnm!@#%^&*()_+=-\"\':;/`~{[}]|\\<>§°");
+        Mat mBmp = new Mat();
+        Utils.bitmapToMat(bmp,mBmp);
+        Imgproc.cvtColor(mBmp,mBmp,Imgproc.COLOR_RGB2GRAY);
+        Core.normalize(mBmp,mBmp,0,255,Core.NORM_MINMAX, CvType.CV_8UC1);
+        Imgproc.equalizeHist(mBmp,mBmp);
+        Imgproc.threshold(mBmp,mBmp,55,255,Imgproc.THRESH_BINARY);
+        Utils.matToBitmap(mBmp,bmp);
         baseApi.setImage(bmp);
+
         final String outputText = baseApi.getUTF8Text();
-        text = outputText;
+        Toast.makeText(context,outputText,Toast.LENGTH_LONG).show();
+        parseOutputText(outputText);
+        baseApi.end();
         Log.i(TAG,outputText);
 
+    }
+
+    void parseOutputText(String outputText)
+    {
+        String[] lines = outputText.split("\n");
+        Log.i(TAG,"num lines "+lines.length);
+        tessPrice="";
+        tessDesc="";
+        Boolean exit=false;
+        Boolean hasPrice=false;
+        for(String line : lines) {
+            if (tessPrice.equals("") || tessPrice.isEmpty()) {
+                tessPrice = getPrice(line);
+                Log.i(TAG,"tessprice: "+tessPrice);
+            }
+            if ((tessDesc.equals("") || tessDesc.isEmpty())) {
+                tessDesc = getDescription(line);
+                Log.i(TAG,"tessdesc: "+tessDesc);
+            }
+        }
+
+    }
+
+    String getPrice(String line){
+        Boolean hasDot=false;
+        String price="";
+        Boolean exit=false;
+        int count=0;
+        final int NUM_DECIMALS = 2;
+        char[] chars = line.toCharArray();
+        for(int i=0; i <chars.length; i++) {
+            while (i < chars.length && ((price.equals("")) || (price.isEmpty()))) {
+                if (chars[i] == '$') {
+                    i++;
+                    exit = false;
+                    while (i < chars.length && !exit && count < NUM_DECIMALS) {
+                        if (hasDot && Character.isDigit(chars[i])) {
+                            count++;
+                            price += chars[i];
+                        } else if (Character.isDigit(chars[i])) {
+                            price += chars[i];
+                        } else if (chars[i] == '.') {
+                            price += chars[i];
+                            hasDot = true;
+                        } else if (chars[i] == ' ') {
+                            //Read over white spaces
+                        } else {
+                            exit = true;
+                        }
+                        i++;
+                    }
+                }
+                else {
+                    i++;
+                }
+            }
+
+        }
+
+        return price;
+    }
+
+    String getDescription(String line){
+        String description="";
+        Boolean exit=false;
+        char[] chars = line.toCharArray();
+        int i=0;
+        do {
+            description="";
+            while (i < chars.length) {
+                if (Character.isUpperCase(chars[i])) {
+                    description += chars[i];
+
+                }
+
+                i++;
+            }
+        }while((description.isEmpty()||description.equals(""))&&i<chars.length);
+
+        return description;
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -308,7 +397,7 @@ public class ListActivity extends Activity implements View.OnClickListener,
     @Override
     public void onClick(View v) {
         takePhoto(v);
-        askForInfo(v);
+
     }
 
     public void askForInfo(View v){
@@ -323,7 +412,8 @@ public class ListActivity extends Activity implements View.OnClickListener,
         final EditText Description = (EditText)dialogInfo.findViewById(R.id.item_Description);
         final EditText Price = (EditText)dialogInfo.findViewById(R.id.item_Price);
         final EditText Quantity = (EditText)dialogInfo.findViewById(R.id.quantity);
-        Description.setText(text);
+        Description.setText(tessDesc);
+        Price.setText(tessPrice);
         //Creates a new builder for this page (main)
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         //Sets the view info for the builder

@@ -138,22 +138,14 @@ public class CustomAdapter extends BaseAdapter{
                 final EditText Quantity = (EditText)view.findViewById(R.id.quantity);
 
                 String description = data.get(ListActivity.DESC_KEY);
-                Description.setHint(description);
+                Description.setText(description);
                 String price = data.get(ListActivity.PRICE_KEY);
-                Price.setHint(price);
+                Price.setText(price);
                 String quantity = data.get(ListActivity.QUANTITY_KEY);
-                Quantity.setHint(quantity);
+                Quantity.setText(quantity);
                 Log.e("Price :",price);
                 Log.e("Quantity :",quantity);
                 Log.e("Desc :", description);
-                //Integer index = (Integer) v.getTag();
-                //!!!!!!!!!!!!!
-                //!!!!!!!!!!!!!
-                //Need to change the subtotal if they enter a new price//!!!!!!!!!
-                //Dont need to change I dont think just need to be moved so it works
-                //PhoneActivity.subTotal.setText("Subtotal: $" + String.format("%.2f",(Float.parseFloat(PhoneActivity.subTotal.getText().toString().substring(11))
-                        //- Float.parseFloat(result.get(index).get(PhoneActivity.PRICE_KEY))* Integer.parseInt(result.get(index).get(PhoneActivity.QUANTITY_KEY)))));
-
                 builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {//When the button is clicked
